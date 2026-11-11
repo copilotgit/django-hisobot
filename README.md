@@ -82,6 +82,7 @@ Only one refresh runs at a time, even with several gunicorn workers.
 | `HEMIS_API_URL` | — | your HEMIS REST API, e.g. `https://student.example.uz/rest/v1/data/` |
 | `HEMIS_API_TOKEN` | — | HEMIS API token (secret) |
 | `HISOBOT_LOGIN_REQUIRED` | `false` | `true` = only logged-in users see the report (uses your `LOGIN_URL`) |
+| `HISOBOT_API_KEY` | — | lets programs read `/hisobot/data.json` without logging in when the report is closed |
 | `HISOBOT_AUTO_REFRESH_HOURS` | `0` | see above; `0` = off |
 | `HISOBOT_DATA_FILE` | `<BASE_DIR>/hisobot_data.json` | where the downloaded report is kept |
 | `HISOBOT_WORKERS` | `3` | parallel requests to HEMIS (it rate-limits — keep it low) |
@@ -97,6 +98,12 @@ if your site is public.
 | `/hisobot/` | the report |
 | `/hisobot/refresh/` | POST, staff only — start a background refresh |
 | `/hisobot/status/` | JSON: `{"running": false, "generated": "11.11.2026 08:00", "error": ""}` |
+| `/hisobot/data.json` | the whole report as JSON, for programs (when `HISOBOT_LOGIN_REQUIRED=true`, send `X-Hisobot-Key: <HISOBOT_API_KEY>`) |
+
+## Nazorat jadvali
+
+The **Nazorat jadvali** desktop app can read `/hisobot/data.json` to keep exams out of rooms that
+already have lessons or other exams. Step-by-step guide (in Uzbek): [docs/NAZORAT_JADVALI.md](docs/NAZORAT_JADVALI.md).
 
 ## What it reads from HEMIS
 

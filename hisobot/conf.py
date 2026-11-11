@@ -76,6 +76,12 @@ def login_required() -> bool:
     return get_bool("HISOBOT_LOGIN_REQUIRED", False)
 
 
+def api_key() -> str:
+    """Lets programs read /data.json without logging in when
+    HISOBOT_LOGIN_REQUIRED is on (header X-Hisobot-Key, or ?key=)."""
+    return get("HISOBOT_API_KEY", "")
+
+
 def auto_refresh_hours() -> int:
     """Older data than this is refreshed in the background when the page is
     opened (0 = only by the button / the management command)."""

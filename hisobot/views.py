@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+import secrets
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 from django.contrib.auth.views import redirect_to_login
-from django.http import HttpResponseForbidden, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
@@ -48,6 +49,25 @@ def refresh_view(request):
         return HttpResponseForbidden("Faqat xodimlar (is_staff) ma'lumotlarni yangilay oladi.")
     report.start_refresh()
     return redirect("hisobot:report")
+
+
+@require_GET
+def data_view(request):
+    """The saved report as JSON - for programs such as the Nazorat jadvali
+    desktop app (rooms busy with lessons and exams). Same access as the page;
+    with HISOBOT_LOGIN_REQUIRED on, the HISOBOT_API_KEY opens it too."""
+    if conf.login_required() and not request.user.is_authenticated:
+        key = conf.api_key()
+        given = request.headers.get("X-Hisobot-Key") or request.GET.get("key", "")
+        if not key or not secrets.compare_digest(given.encode(), key.encode()):
+            return JsonResponse({"detail": "Kirish talab qilinadi (X-Hisobot-Key)."}, status=403)
+    path = conf.data_file()
+    if not path.exists():
+        return JsonResponse({"detail": "Hisobot hali yuklanmagan (python manage.py hisobot_refresh)."}, status=404)
+    response = HttpResponse(path.read_bytes(), content_type="application/json; charset=utf-8")
+    if not conf.login_required():
+        response["Access-Control-Allow-Origin"] = "*"
+    return response
 
 
 @require_GET

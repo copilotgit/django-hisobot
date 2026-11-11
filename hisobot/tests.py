@@ -147,6 +147,22 @@ class RefreshAndViewTests(TempDataFile):
     def test_not_configured_message(self):
         self.assertContains(self.client.get(reverse("hisobot:report")), "HEMIS_API_TOKEN")
 
+    def test_data_json(self):
+        self.assertEqual(self.client.get(reverse("hisobot:data")).status_code, 404)
+        with mock.patch("hisobot.report.HemisClient", fake_client):
+            report.refresh(log=lambda t: None)
+        data = self.client.get(reverse("hisobot:data")).json()
+        self.assertIn("101", data["events"])
+        self.assertNotIn("test-token", json.dumps(data))
+
+    @override_settings(HISOBOT_LOGIN_REQUIRED=True, HISOBOT_API_KEY="k123")
+    def test_data_json_key_when_login_required(self):
+        with mock.patch("hisobot.report.HemisClient", fake_client):
+            report.refresh(log=lambda t: None)
+        self.assertEqual(self.client.get(reverse("hisobot:data")).status_code, 403)
+        self.assertEqual(self.client.get(reverse("hisobot:data"), HTTP_X_HISOBOT_KEY="bad").status_code, 403)
+        self.assertEqual(self.client.get(reverse("hisobot:data"), HTTP_X_HISOBOT_KEY="k123").status_code, 200)
+
     def test_status_endpoint(self):
         data = self.client.get(reverse("hisobot:status")).json()
         self.assertEqual(data["running"], False)
