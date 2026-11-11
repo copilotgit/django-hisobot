@@ -16,7 +16,7 @@ shows **exams**, and anyone you allow can open it without a HEMIS account.
 ## Install (2 lines in your project)
 
 1. Copy the `hisobot/` folder next to your `manage.py`
-   (or `pip install git+https://github.com/<you>/django-hisobot.git`), then install the
+   (or `pip install git+https://github.com/copilotgit/django-hisobot.git`), then install the
    requirements:
 
    ```bash
