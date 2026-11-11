@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-hisobot"
+version = "1.0.0"
+description = "Auditoriya bandligi: HEMIS room occupancy report (lessons and exams) as a reusable Django app"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = ["Django>=4.2", "requests>=2.28", "python-dotenv>=1.0"]
+classifiers = [
+    "Framework :: Django",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+
+[tool.setuptools.packages.find]
+include = ["hisobot*"]
+
+[tool.setuptools.package-data]
+hisobot = ["templates/hisobot/*.html"]

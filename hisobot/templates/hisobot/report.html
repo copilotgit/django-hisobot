@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auditoriya bandligi</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Source Sans Pro", "Segoe UI", Arial, sans-serif; font-size: 14px; color: #333; background: #ecf0f5; }
+  .content-header { padding: 15px 15px 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .content-header h1 { margin: 0; font-size: 24px; font-weight: 400; }
+  .content { padding: 15px; }
+  .box { background: #fff; border-top: 3px solid #3c8dbc; border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,.1); }
+  .box-header { padding: 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-bottom: 1px solid #f4f4f4; }
+  .week-nav { display: flex; width: 380px; max-width: 100%; }
+  .week-nav button { width: 40px; border: 1px solid #ddd; background: #f4f4f4; cursor: pointer; font-size: 14px; }
+  .week-nav button:hover { background: #e7e7e7; }
+  .week-nav button:disabled { cursor: default; color: #bbb; }
+  select { height: 34px; padding: 6px 10px; border: 1px solid #d2d6de; font-size: 14px; background: #fff; }
+  .week-nav select { flex: 1; text-align: center; border-left: 0; border-right: 0; min-width: 0; }
+  #building { width: 380px; max-width: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-left: auto; color: #555; font-size: 13px; }
+  .legend span::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 5px; vertical-align: -2px; background: var(--c); border: 1px solid #ccc; }
+  .table-wrap { overflow: auto; max-height: calc(100vh - 170px); }
+  table.map-table { border-collapse: collapse; width: 100%; }
+  .map-table th, .map-table td { border: 1px solid #f4f4f4; padding: 4px; text-align: center; white-space: nowrap; }
+  .map-table thead th { position: sticky; background: #fff; z-index: 2; font-weight: 600; }
+  .map-table thead tr:first-child th { top: 0; height: 30px; }
+  .map-table thead tr:nth-child(2) th { top: 30px; font-weight: 400; min-width: 24px; }
+  .map-table th.day { border-left: 2px solid #ddd; }
+  .map-table td.day-start { border-left: 2px solid #ddd; }
+  .map-table tbody tr:nth-of-type(odd) { background: #f9f9f9; }
+  .map-table tbody tr:hover { background: #f0f0f0; }
+  .map-table td.cell { min-width: 24px; cursor: default; }
+  .map-table td.cell.busy { cursor: pointer; font-weight: 600; }
+  .lesson { background: #8fd19e !important; }
+  .exam { background: #ff9696 !important; }
+  .both { background: #ffe066 !important; }
+  .empty { padding: 20px; color: #777; }
+  .notice { margin: 15px 15px 0; padding: 10px 14px; border-radius: 3px; background: #fff; border-left: 4px solid #3c8dbc; }
+  .notice.error { border-left-color: #dd4b39; }
+  .refresh { margin-left: auto; }
+  .refresh button { height: 34px; padding: 0 14px; border: 1px solid #367fa9; background: #3c8dbc; color: #fff; border-radius: 3px; cursor: pointer; font-size: 14px; }
+  .refresh button:disabled { opacity: .6; cursor: default; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: flex-start; justify-content: center; z-index: 10; overflow: auto; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #fff; width: 760px; max-width: calc(100% - 32px); margin: 40px 0; border-radius: 3px; box-shadow: 0 5px 15px rgba(0,0,0,.5); }
+  .modal-header { padding: 15px; border-bottom: 1px solid #e5e5e5; display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h4 { margin: 0; font-size: 18px; font-weight: 400; }
+  .modal-header button { border: 0; background: none; font-size: 22px; cursor: pointer; color: #999; }
+  .modal-body { padding: 15px; overflow-x: auto; }
+  .modal table { width: 100%; border-collapse: collapse; }
+  .modal th, .modal td { border: 1px solid #f4f4f4; padding: 6px 8px; text-align: left; vertical-align: top; }
+  .modal tr.current td { font-weight: 600; }
+  .modal tr.k0 td:first-child { border-left: 4px solid #8fd19e; }
+  .modal tr.k1 td:first-child { border-left: 4px solid #ff9696; }
+  .badge { font-size: 12px; color: #777; }
+  footer { padding: 0 15px 15px; color: #888; font-size: 12px; }
+</style>
+</head>
+<body>
+<section class="content-header">
+  <h1>Auditoriya bandligi</h1>
+  {% if can_refresh and configured %}
+  <form class="refresh" method="post" action="{% url 'hisobot:refresh' %}">
+    {% csrf_token %}
+    <button type="submit" {% if state.running %}disabled{% endif %}>
+      {% if state.running %}Yangilanmoqda...{% else %}HEMIS'dan yangilash{% endif %}
+    </button>
+  </form>
+  {% endif %}
+</section>
+
+{% if not configured %}
+  <div class="notice error">HEMIS ulanmagan: <code>.env</code> faylida <code>HEMIS_API_URL</code> va <code>HEMIS_API_TOKEN</code> ni to'ldiring.</div>
+{% elif state.running %}
+  <div class="notice" id="running">Ma'lumotlar HEMIS'dan yuklanmoqda - bir necha daqiqa davom etadi, sahifa o'zi yangilanadi.</div>
+{% elif state.error and can_refresh %}
+  <div class="notice error">Oxirgi yangilashda xato: {{ state.error }}</div>
+{% endif %}
+
+{% if data %}
+<section class="content">
+  <div class="box">
+    <div class="box-header">
+      <div class="week-nav">
+        <button type="button" id="prev" title="Oldingi hafta">&#10094;</button>
+        <select id="week" aria-label="Hafta"></select>
+        <button type="button" id="next" title="Keyingi hafta">&#10095;</button>
+      </div>
+      <select id="building" aria-label="Bino"></select>
+      <div class="legend">
+        <span style="--c:#8fd19e">Dars</span>
+        <span style="--c:#ff9696">Imtihon</span>
+        <span style="--c:#ffe066">Dars + imtihon</span>
+      </div>
+    </div>
+    <div class="table-wrap" id="grid"></div>
+  </div>
+</section>
+<footer id="footer"></footer>
+<div class="modal-bg" id="modal"><div class="modal">
+  <div class="modal-header"><h4 id="modal-title"></h4><button type="button" id="modal-close" aria-label="Yopish">&times;</button></div>
+  <div class="modal-body" id="modal-body"></div>
+</div></div>
+{{ data|json_script:"hisobot-data" }}
+{{ today|json_script:"hisobot-today" }}
+<script>
+const DATA = JSON.parse(document.getElementById("hisobot-data").textContent);
+DATA.today = JSON.parse(document.getElementById("hisobot-today").textContent);
+const S = DATA.strings;
+const DAYS = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
+const MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const pad = n => String(n).padStart(2, "0");
+
+function addDays(iso, n) { const d = new Date(iso + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d; }
+function isoOf(d) { return d.toISOString().slice(0, 10); }
+function dmy(d) { return pad(d.getUTCDate()) + "-" + pad(d.getUTCMonth() + 1) + "-" + d.getUTCFullYear(); }
+function weekLabel(iso) {
+  const a = addDays(iso, 0), b = addDays(iso, 5);
+  return pad(a.getUTCDate()) + " " + MONTHS[a.getUTCMonth()] + " - " + pad(b.getUTCDate()) + " " + MONTHS[b.getUTCMonth()] + ", " + b.getUTCFullYear();
+}
+
+// lessons/exams with several groups count once: subject + type + teacher
+function cellInfo(events, pair) {
+  const sets = [new Set(), new Set()];
+  for (const e of events) {
+    if (e[0] === pair) sets[e[1]].add(e[2] + "|" + e[3] + "|" + e[4]);
+  }
+  return {lessons: sets[0].size, exams: sets[1].size};
+}
+
+function render() {
+  const week = $("week").value, building = Number($("building").value);
+  try { localStorage.setItem("hisobot", JSON.stringify({week, building})); } catch (e) {}
+  const idx = DATA.weeks.indexOf(week);
+  $("prev").disabled = idx <= 0;
+  $("next").disabled = idx >= DATA.weeks.length - 1;
+  const rooms = DATA.rooms.filter(r => r.b === building);
+  if (!week || !rooms.length) { $("grid").innerHTML = '<div class="empty">Xech narsa topilmadi</div>'; return; }
+  const dates = DAYS.map((_, i) => addDays(week, i));
+  const pairs = Array.from({length: DATA.pairs}, (_, i) => i + 1);
+  let h = '<table class="map-table"><thead><tr><th rowspan="2">Auditoriya</th><th rowspan="2">Turi</th><th rowspan="2">Sig\'im</th>';
+  dates.forEach((d, i) => h += `<th class="day" colspan="${pairs.length}">${DAYS[i]} ${dmy(d)}</th>`);
+  h += "</tr><tr>";
+  dates.forEach(() => pairs.forEach(p => {
+    const t = DATA.pairTimes[p];
+    h += `<th${p === 1 ? ' class="day"' : ""}${t ? ` title="${esc(t[0])} - ${esc(t[1])}"` : ""}>${p}</th>`;
+  }));
+  h += "</tr></thead><tbody>";
+  for (const room of rooms) {
+    const byDate = DATA.events[room.c] || {};
+    h += `<tr><td>${esc(room.n)}</td><td>${esc(room.t)}</td><td>${room.v}</td>`;
+    dates.forEach(d => {
+      const iso = isoOf(d), events = byDate[iso] || [];
+      pairs.forEach(p => {
+        const c = cellInfo(events, p), n = c.lessons + c.exams;
+        let cls = "cell" + (p === 1 ? " day-start" : "");
+        if (n) cls += " busy " + (c.lessons && c.exams ? "both" : c.exams ? "exam" : "lesson");
+        h += n ? `<td class="${cls}" data-room="${esc(room.c)}" data-date="${iso}" data-pair="${p}">${n}</td>` : `<td class="${cls}"></td>`;
+      });
+    });
+    h += "</tr>";
+  }
+  $("grid").innerHTML = h + "</tbody></table>";
+}
+
+function openModal(roomCode, iso, pair) {
+  const room = DATA.rooms.find(r => String(r.c) === roomCode);
+  const events = ((DATA.events[roomCode] || {})[iso] || []).slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  $("modal-title").textContent = room.n + " — " + dmy(addDays(iso, 0));
+  let h = "<table><thead><tr><th>Fanlar</th><th>Xodim</th><th>Guruh</th><th>Juftlik</th></tr></thead><tbody>";
+  for (const e of events) {
+    h += `<tr class="k${e[1]}${e[0] === pair ? " current" : ""}"><td>${esc(S[e[2]])} <span class="badge">${esc(S[e[3]])}${e[1] ? " (imtihon)" : ""}</span></td>` +
+         `<td>${esc(S[e[4]])}</td><td>${esc(S[e[5]])}</td><td>${e[0]}</td></tr>`;
+  }
+  $("modal-body").innerHTML = h + "</tbody></table>";
+  $("modal").classList.add("open");
+}
+
+function init() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("hisobot") || "{}"); } catch (e) {}
+  const todayWeek = isoOf(addDays(DATA.today, -((new Date(DATA.today + "T00:00:00Z").getUTCDay() + 6) % 7)));
+  $("week").innerHTML = DATA.weeks.map(w => `<option value="${w}">${weekLabel(w)}</option>`).join("");
+  $("building").innerHTML = DATA.buildings.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join("");
+  const week = [saved.week, todayWeek].find(w => DATA.weeks.includes(w)) || DATA.weeks[DATA.weeks.length - 1];
+  if (week) $("week").value = week;
+  if (DATA.buildings.some(b => b.id === saved.building)) $("building").value = saved.building;
+  $("week").onchange = $("building").onchange = render;
+  $("prev").onclick = () => { $("week").selectedIndex--; render(); };
+  $("next").onclick = () => { $("week").selectedIndex++; render(); };
+  $("grid").onclick = e => { const td = e.target.closest("td.busy"); if (td) openModal(td.dataset.room, td.dataset.date, Number(td.dataset.pair)); };
+  $("modal-close").onclick = () => $("modal").classList.remove("open");
+  $("modal").onclick = e => { if (e.target.id === "modal") $("modal").classList.remove("open"); };
+  document.onkeydown = e => { if (e.key === "Escape") $("modal").classList.remove("open"); };
+  $("footer").textContent = "Ma'lumotlar yangilangan: " + DATA.generated;
+  render();
+}
+init();
+</script>
+{% elif configured %}
+  <section class="content"><div class="box"><div class="empty">
+    Hisobot hali yuklanmagan.
+    {% if can_refresh %}Yuqoridagi "HEMIS'dan yangilash" tugmasini bosing{% else %}Administrator ma'lumotlarni yuklashi kerak{% endif %}
+    (yoki serverda: <code>python manage.py hisobot_refresh</code>).
+  </div></div></section>
+{% endif %}
+
+{% if state.running %}
+<script>
+// reload once the background refresh has finished
+(function poll() {
+  setTimeout(() => fetch("{% url 'hisobot:status' %}", {credentials: "same-origin"})
+    .then(r => r.json()).then(s => s.running ? poll() : location.reload()).catch(poll), 5000);
+})();
+</script>
+{% endif %}
+</body>
+</html>
