@@ -62,7 +62,7 @@
 <section class="content-header">
   <h1>Auditoriya bandligi</h1>
   {% if can_refresh and configured %}
-  <form class="refresh" method="post" action="{% url 'hisobot:refresh' %}">
+  <form class="refresh" method="post" action="{{ refresh_url }}">
     {% csrf_token %}
     <button type="submit" {% if state.running %}disabled{% endif %}>
       {% if state.running %}Yangilanmoqda...{% else %}HEMIS'dan yangilash{% endif %}
@@ -203,9 +203,10 @@ init();
 </script>
 {% elif configured %}
   <section class="content"><div class="box"><div class="empty">
+    {% if empty_text %}{{ empty_text }}{% else %}
     Hisobot hali yuklanmagan.
     {% if can_refresh %}Yuqoridagi "HEMIS'dan yangilash" tugmasini bosing{% else %}Administrator ma'lumotlarni yuklashi kerak{% endif %}
-    (yoki serverda: <code>python manage.py hisobot_refresh</code>).
+    (yoki serverda: <code>python manage.py hisobot_refresh</code>).{% endif %}
   </div></div></section>
 {% endif %}
 
@@ -213,7 +214,7 @@ init();
 <script>
 // reload once the background refresh has finished
 (function poll() {
-  setTimeout(() => fetch("{% url 'hisobot:status' %}", {credentials: "same-origin"})
+  setTimeout(() => fetch("{{ status_url }}", {credentials: "same-origin"})
     .then(r => r.json()).then(s => s.running ? poll() : location.reload()).catch(poll), 5000);
 })();
 </script>

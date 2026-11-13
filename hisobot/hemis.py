@@ -36,12 +36,12 @@ class HemisClient:
         self.workers = workers
         self.log = log
 
-    def get(self, endpoint: str, params: dict) -> dict:
+    def get(self, endpoint: str, params: dict, retries: int = RETRIES, timeout: int = 120) -> dict:
         headers = {"accept": "application/json", "Authorization": f"Bearer {self.token}"}
         error = None
-        for attempt in range(RETRIES):
+        for attempt in range(retries):
             try:
-                response = requests.get(self.api_url + endpoint, params=params, headers=headers, timeout=120)
+                response = requests.get(self.api_url + endpoint, params=params, headers=headers, timeout=timeout)
                 if response.status_code in (401, 403):
                     raise HemisError(f"HEMIS tokeni qabul qilinmadi ({response.status_code}). HEMIS_API_TOKEN ni tekshiring.")
                 data = response.json()
@@ -54,7 +54,8 @@ class HemisClient:
             except (requests.RequestException, ValueError) as exc:
                 error = exc
                 wait = 3 * (attempt + 1)
-            time.sleep(wait)
+            if attempt + 1 < retries:
+                time.sleep(wait)
         raise HemisError(f"{endpoint} {params}: {error}")
 
     def fetch_all(self, endpoint: str, **filters) -> list:

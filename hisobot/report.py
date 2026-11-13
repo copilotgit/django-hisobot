@@ -180,6 +180,16 @@ def _acquire_lock() -> bool:
         return False
 
 
+def download(client: HemisClient, log=print) -> dict:
+    """Everything the report needs, read with `client`, as the report."""
+    auditoriums, buildings = client.auditoriums()
+    faculties = client.faculties()
+    log("Darslar yuklanmoqda...")
+    lessons = client.lessons(faculties)
+    exams = client.exams()
+    return build_report(auditoriums, buildings, lessons, exams, conf.utc_offset_hours())
+
+
 def refresh(log=print) -> dict:
     """Downloads everything from HEMIS and saves the report. Raises
     RuntimeError when another refresh is running."""
@@ -188,12 +198,7 @@ def refresh(log=print) -> dict:
     started = time.time()
     try:
         client = HemisClient(conf.api_url(), conf.api_token(), conf.workers(), log=log)
-        auditoriums, buildings = client.auditoriums()
-        faculties = client.faculties()
-        log("Darslar yuklanmoqda...")
-        lessons = client.lessons(faculties)
-        exams = client.exams()
-        report = build_report(auditoriums, buildings, lessons, exams, conf.utc_offset_hours())
+        report = download(client, log)
         _save(report)
         log(f"Hisobot saqlandi: {conf.data_file()} ({time.time() - started:.0f} s)")
         _write_status(error="", finished=report["generated"])

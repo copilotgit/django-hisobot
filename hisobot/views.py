@@ -7,6 +7,7 @@ from functools import wraps
 from django.contrib.auth.views import redirect_to_login
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from . import conf, report
@@ -40,6 +41,8 @@ def report_view(request):
         "state": state,
         "can_refresh": can_refresh,
         "configured": bool(conf.api_url() and conf.api_token()),
+        "refresh_url": reverse("hisobot:refresh"),
+        "status_url": reverse("hisobot:status"),
     })
 
 
